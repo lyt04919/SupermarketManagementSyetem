@@ -1,67 +1,64 @@
 <template>
-  <div class="user-container">
+  <div class="supplier-container">
     <!-- 搜索区域 -->
     <div class="search-section">
       <div class="search-fields">
         <div class="search-item">
-          <label>用户名：</label>
-          <input v-model="searchForm.username" type="text" placeholder="请输入用户名称" />
+          <label>供应商号：</label>
+          <input v-model="searchForm.supplierId" type="text" placeholder="请输入供应商号" />
         </div>
         <div class="search-item">
-          <label>用户角色：</label>
-          <select v-model="searchForm.role">
-            <option value="">请选择</option>
-            <option value="普通员工">普通员工</option>
-            <option value="经理助理">经理助理</option>
-            <option value="销售经理">销售经理</option>
-            <option value="财务会计">财务会计</option>
-          </select>
+          <label>供应商名称：</label>
+          <input v-model="searchForm.supplierName" type="text" placeholder="请输入供应商名称" />
+        </div>
+        <div class="search-item">
+          <label>联系人：</label>
+          <input v-model="searchForm.contact" type="text" placeholder="请输入联系人" />
         </div>
         <div class="search-actions">
           <button class="btn-search" @click="search">搜索</button>
-          <button class="btn-add" @click="addUser">+ 添加用户</button>
+          <button class="btn-reset" @click="resetSearch">重置</button>
+          <button class="btn-add" @click="openAddDialog">+ 添加供应商</button>
         </div>
       </div>
     </div>
 
     <!-- 表格区域 -->
     <div class="table-section">
-      <table class="user-table">
+      <table class="supplier-table">
         <thead>
           <tr>
-            <th>用户编号</th>
-            <th>用户名称</th>
-            <th>性别</th>
-            <th>年龄</th>
-            <th>电话</th>
-            <th>用户角色</th>
+            <th>供应商号</th>
+            <th>供应商名称</th>
+            <th>联系人</th>
+            <th>联系电话</th>
+            <th>地址</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in paginatedUsers" :key="user.id">
-            <td>{{ user.code }}</td>
-            <td>{{ user.name }}</td>
-            <td>{{ user.gender }}</td>
-            <td>{{ user.age }}</td>
-            <td>{{ user.phone }}</td>
-            <td>{{ user.role }}</td>
+          <tr v-for="supplier in paginatedSuppliers" :key="supplier.id">
+            <td>{{ supplier.supplierId }}</td>
+            <td>{{ supplier.supplierName }}</td>
+            <td>{{ supplier.contact }}</td>
+            <td>{{ supplier.phone }}</td>
+            <td>{{ supplier.address }}</td>
             <td>
               <div class="action-buttons">
-                <button class="action-btn view" title="查看" @click="viewUser(user.id)">
+                <button class="action-btn view" title="查看" @click="viewSupplier(supplier)">
                   <img :src="readIcon" alt="查看" />
                 </button>
-                <button class="action-btn edit" title="编辑" @click="editUser(user.id)">
+                <button class="action-btn edit" title="编辑" @click="openEditDialog(supplier)">
                   <img :src="xiugaiIcon" alt="编辑" />
                 </button>
-                <button class="action-btn delete" title="删除" @click="showDeleteDialog(user.id)">
+                <button class="action-btn delete" title="删除" @click="showDeleteDialog(supplier.id)">
                   <img :src="schuIcon" alt="删除" />
                 </button>
               </div>
             </td>
           </tr>
-          <tr v-if="paginatedUsers.length === 0">
-            <td colspan="7" class="empty-cell">没有匹配到用户数据</td>
+          <tr v-if="paginatedSuppliers.length === 0">
+            <td colspan="6" class="empty-cell">没有匹配到供应商数据</td>
           </tr>
         </tbody>
       </table>
@@ -70,13 +67,13 @@
     <!-- 分页区域 -->
     <div class="pagination-section">
       <div class="pagination-info">
-        <span>Total {{ filteredUsers.length }} / {{ totalPages }}page</span>
+        <span>共 {{ filteredSuppliers.length }} 条记录 / {{ totalPages }} 页</span>
       </div>
       <div class="pagination-controls">
         <select v-model="pageSize" @change="currentPage = 1">
-          <option :value="4">4</option>
-          <option :value="8">8</option>
-          <option :value="12">12</option>
+          <option :value="5">5</option>
+          <option :value="10">10</option>
+          <option :value="20">20</option>
         </select>
         <button class="page-btn" :disabled="currentPage === 1" @click="prevPage">«</button>
         <button
@@ -89,13 +86,13 @@
           {{ page }}
         </button>
         <button class="page-btn" :disabled="currentPage === totalPages" @click="nextPage">»</button>
-        <span>Go to</span>
+        <span>前往</span>
         <input v-model="goToPage" type="number" min="1" :max="totalPages" @keyup.enter="navigateToPage" />
       </div>
     </div>
 
     <!-- 删除确认对话框 -->
-    <div v-if="showDialog" class="modal-overlay" @click.self="showDialog = false">
+    <div v-if="showDelDialog" class="modal-overlay" @click.self="showDelDialog = false">
       <div class="confirm-dialog">
         <div class="dialog-header">
           <h3>提示</h3>
@@ -107,8 +104,45 @@
           </div>
         </div>
         <div class="dialog-footer">
-          <button class="btn-cancel" @click="showDialog = false">取消</button>
+          <button class="btn-cancel" @click="showDelDialog = false">取消</button>
           <button class="btn-confirm" @click="confirmDelete">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加/编辑供应商对话框 -->
+    <div v-if="showFormDialog" class="modal-overlay" @click.self="showFormDialog = false">
+      <div class="form-dialog">
+        <div class="dialog-header">
+          <h3>{{ isEditing ? '编辑供应商' : '添加供应商' }}</h3>
+        </div>
+        <div class="dialog-body">
+          <form @submit.prevent="saveSupplier">
+            <div class="form-item">
+              <label>供应商号：</label>
+              <input v-model="formData.supplierId" type="text" placeholder="请输入供应商号" :disabled="isEditing" />
+            </div>
+            <div class="form-item">
+              <label>供应商名称：</label>
+              <input v-model="formData.supplierName" type="text" placeholder="请输入供应商名称" required />
+            </div>
+            <div class="form-item">
+              <label>联系人：</label>
+              <input v-model="formData.contact" type="text" placeholder="请输入联系人" required />
+            </div>
+            <div class="form-item">
+              <label>联系电话：</label>
+              <input v-model="formData.phone" type="text" placeholder="请输入联系电话" required />
+            </div>
+            <div class="form-item">
+              <label>地址：</label>
+              <input v-model="formData.address" type="text" placeholder="请输入地址" required />
+            </div>
+          </form>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-cancel" @click="showFormDialog = false">取消</button>
+          <button class="btn-confirm" @click="saveSupplier">确定</button>
         </div>
       </div>
     </div>
@@ -117,60 +151,55 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 
 import readIcon from '../assets/icon/read.png'
 import schuIcon from '../assets/icon/schu.png'
 import xiugaiIcon from '../assets/icon/xiugai.png'
 
-interface UserRecord {
+interface Supplier {
   id: number
-  code: string
-  name: string
-  gender: string
-  age: number
+  supplierId: string
+  supplierName: string
+  contact: string
   phone: string
-  role: string
+  address: string
 }
 
-const router = useRouter()
-
 const searchForm = ref({
-  username: '',
-  role: ''
+  supplierId: '',
+  supplierName: '',
+  contact: ''
 })
 
-const showDialog = ref(false)
-const deleteUserId = ref<number | null>(null)
-
-const users = ref<UserRecord[]>([
-  { id: 1, code: 'ck4009', name: 'irina', gender: '男', age: 23, phone: '13313224667', role: '普通员工' },
-  { id: 2, code: 'ck4010', name: 'alice', gender: '女', age: 21, phone: '13813224668', role: '经理助理' },
-  { id: 3, code: 'ck4011', name: '赵琳', gender: '女', age: 20, phone: '13601324667', role: '经理助理' },
-  { id: 4, code: 'ck4012', name: 'tina', gender: '男', age: 21, phone: '13313224667', role: '销售经理' },
-  { id: 5, code: 'ck4002', name: 'Jone', gender: '女', age: 21, phone: '13801234568', role: '财务会计' },
-  { id: 6, code: 'ck4003', name: 'linda', gender: '女', age: 20, phone: '13301234669', role: '财务会计' }
+const suppliers = ref<Supplier[]>([
+  { id: 1, supplierId: '3003', supplierName: 'vivo供应商', contact: '张经理', phone: '13800138000', address: '广东省深圳市' },
+  { id: 2, supplierId: '3004', supplierName: '苹果供应商', contact: '李经理', phone: '13900139000', address: '上海市浦东新区' },
+  { id: 3, supplierId: '3005', supplierName: 'oppo供应商', contact: '王经理', phone: '13700137000', address: '广东省东莞市' }
 ])
 
+let nextId = 4
+
 const currentPage = ref(1)
-const pageSize = ref(4)
+const pageSize = ref(10)
 const goToPage = ref(1)
 
-const filteredUsers = computed(() =>
-  users.value.filter((user) => {
-    const matchesUsername = user.name.toLowerCase().includes(searchForm.value.username.toLowerCase())
-    const matchesRole = !searchForm.value.role || user.role === searchForm.value.role
-    return matchesUsername && matchesRole
+const filteredSuppliers = computed(() =>
+  suppliers.value.filter((supplier) => {
+    const matchSupplierId = !searchForm.value.supplierId || supplier.supplierId.includes(searchForm.value.supplierId)
+    const matchSupplierName = !searchForm.value.supplierName || supplier.supplierName.includes(searchForm.value.supplierName)
+    const matchContact = !searchForm.value.contact || supplier.contact.includes(searchForm.value.contact)
+
+    return matchSupplierId && matchSupplierName && matchContact
   })
 )
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / pageSize.value)))
-const paginatedUsers = computed(() => {
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredSuppliers.value.length / pageSize.value)))
+const paginatedSuppliers = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
-  return filteredUsers.value.slice(start, start + pageSize.value)
+  return filteredSuppliers.value.slice(start, start + pageSize.value)
 })
 
-watch(filteredUsers, () => {
+watch(filteredSuppliers, () => {
   if (currentPage.value > totalPages.value) {
     currentPage.value = totalPages.value
     goToPage.value = totalPages.value
@@ -180,6 +209,15 @@ watch(filteredUsers, () => {
 const search = () => {
   currentPage.value = 1
   goToPage.value = 1
+}
+
+const resetSearch = () => {
+  searchForm.value = {
+    supplierId: '',
+    supplierName: '',
+    contact: ''
+  }
+  search()
 }
 
 const prevPage = () => {
@@ -211,38 +249,82 @@ const navigateToPage = () => {
   goToPage.value = page
 }
 
-const addUser = () => {
-  router.push('/home/user/add')
+const viewSupplier = (supplier: Supplier) => {
+  alert(`查看供应商：${supplier.supplierName}\n供应商号：${supplier.supplierId}\n联系人：${supplier.contact}\n联系电话：${supplier.phone}\n地址：${supplier.address}`)
 }
 
-const viewUser = (id: number) => {
-  router.push({
-    path: '/home/user/detail',
-    query: { id: id.toString() }
-  })
+const showFormDialog = ref(false)
+const isEditing = ref(false)
+const formData = ref<Supplier>({
+  id: 0,
+  supplierId: '',
+  supplierName: '',
+  contact: '',
+  phone: '',
+  address: ''
+})
+
+const openAddDialog = () => {
+  isEditing.value = false
+  formData.value = {
+    id: 0,
+    supplierId: '',
+    supplierName: '',
+    contact: '',
+    phone: '',
+    address: ''
+  }
+  showFormDialog.value = true
 }
 
-const editUser = (id: number) => {
-  router.push({
-    path: '/home/user/edit',
-    query: { id: id.toString() }
-  })
+const openEditDialog = (supplier: Supplier) => {
+  isEditing.value = true
+  formData.value = { ...supplier }
+  showFormDialog.value = true
 }
+
+const saveSupplier = () => {
+  if (!formData.value.supplierId || !formData.value.supplierName || !formData.value.contact || !formData.value.phone || !formData.value.address) {
+    alert('请填写完整的供应商信息')
+    return
+  }
+
+  if (isEditing.value) {
+    // 编辑现有供应商
+    const index = suppliers.value.findIndex(s => s.id === formData.value.id)
+    if (index !== -1) {
+      suppliers.value[index] = { ...formData.value }
+    }
+  } else {
+    // 添加新供应商
+    const newSupplier: Supplier = {
+      ...formData.value,
+      id: nextId++
+    }
+    suppliers.value.push(newSupplier)
+  }
+
+  showFormDialog.value = false
+  search()
+}
+
+const showDelDialog = ref(false)
+const deleteId = ref<number | null>(null)
 
 const showDeleteDialog = (id: number) => {
-  deleteUserId.value = id
-  showDialog.value = true
+  deleteId.value = id
+  showDelDialog.value = true
 }
 
 const confirmDelete = () => {
-  users.value = users.value.filter((user) => user.id !== deleteUserId.value)
-  showDialog.value = false
+  suppliers.value = suppliers.value.filter((supplier) => supplier.id !== deleteId.value)
+  showDelDialog.value = false
   search()
 }
 </script>
 
 <style scoped>
-.user-container {
+.supplier-container {
   padding: 20px;
   height: calc(100vh - 120px);
   display: flex;
@@ -301,6 +383,7 @@ const confirmDelete = () => {
 }
 
 .btn-search,
+.btn-reset,
 .btn-add {
   height: 32px;
   padding: 0 15px;
@@ -320,6 +403,15 @@ const confirmDelete = () => {
   background: #357ABD;
 }
 
+.btn-reset {
+  background: #95A5A6;
+  color: #fff;
+}
+
+.btn-reset:hover {
+  background: #7F8C8D;
+}
+
 .btn-add {
   background: #5CB85C;
   color: #fff;
@@ -337,20 +429,20 @@ const confirmDelete = () => {
   border-radius: 4px;
 }
 
-.user-table {
+.supplier-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.user-table th,
-.user-table td {
+.supplier-table th,
+.supplier-table td {
   padding: 12px;
   text-align: center;
   border-bottom: 1px solid #E0E0E0;
 }
 
-.user-table th {
+.supplier-table th {
   background: #F8F9FA;
   font-weight: bold;
   color: #333;
@@ -359,7 +451,7 @@ const confirmDelete = () => {
   z-index: 10;
 }
 
-.user-table tr:hover {
+.supplier-table tr:hover {
   background: #F5F5F5;
 }
 
@@ -487,6 +579,14 @@ const confirmDelete = () => {
   overflow: hidden;
 }
 
+.form-dialog {
+  width: 400px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
 .dialog-header {
   background: #F8F9FA;
   padding: 15px;
@@ -502,6 +602,35 @@ const confirmDelete = () => {
 
 .dialog-body {
   padding: 20px;
+}
+
+.form-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.form-item label {
+  width: 80px;
+  font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+}
+
+.form-item input,
+.form-item select {
+  flex: 1;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-item input:disabled {
+  background: #F8F9FA;
+  cursor: not-allowed;
 }
 
 .dialog-content {
@@ -580,6 +709,26 @@ const confirmDelete = () => {
   .pagination-controls {
     width: 100%;
     justify-content: space-between;
+  }
+  
+  .form-dialog {
+    width: 90%;
+    max-width: 400px;
+  }
+  
+  .form-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .form-item label {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+  
+  .form-item input,
+  .form-item select {
+    width: 100%;
   }
 }
 </style>

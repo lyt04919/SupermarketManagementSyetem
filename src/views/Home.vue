@@ -1,122 +1,128 @@
 <template>
-  <div class="home-container">
+  <div class="system-container">
     <!-- 顶部导航栏 -->
-    <header class="header">
+    <header class="system-header">
       <div class="header-left">
         <h1>超市后台管理系统</h1>
       </div>
       <div class="header-right">
-        <span>{{ currentDate }}</span>
-        <span class="user-info">上午好: {{ username }}</span>
-        <button class="theme-btn">退出</button>
+        <span class="header-time">{{ currentDate }}</span>
+        <span class="header-user">上午好: {{ username }}</span>
+        <span class="header-welcome">欢迎</span>
       </div>
     </header>
-    
-    <!-- 主要内容区域 -->
-    <div class="main-content">
-      <!-- 左侧侧边栏 -->
-      <aside class="sidebar">
-        <h3>功能列表</h3>
-        <ul class="menu">
-          <li @click="navigate('/home/product')">
-            <img class="menu-icon" :src="goodsIcon" alt="商品管理">
-            商品管理
-          </li>
-          <li @click="navigate('/home/order')">
-            <img class="menu-icon" :src="buyIcon" alt="订单管理">
-            订单管理
-          </li>
-          <li @click="navigate('/home/supplier')">
-            <img class="menu-icon" :src="gysIcon" alt="供应商管理">
-            供应商管理
-          </li>
-          <li @click="navigate('/home/user')">
-            <img class="menu-icon" :src="yhIcon" alt="用户管理">
-            用户管理
-          </li>
-          <li @click="navigate('/home/password')">
-            <img class="menu-icon" :src="mmIcon" alt="密码修改">
-            密码修改
-          </li>
-          <li @click="logout">
-            <img class="menu-icon" :src="tcIcon" alt="退出系统">
-            退出系统
+
+    <div class="system-body">
+      <!-- 左侧功能列表 -->
+      <aside class="function-sidebar">
+        <h2 class="sidebar-title">功能列表</h2>
+        <ul class="function-list">
+          <li 
+            v-for="item in menuItems" 
+            :key="item.label"
+            class="function-item"
+            :class="{ active: isActive(item.path) }"
+            @click="handleMenuClick(item)"
+          >
+            <img class="function-icon" :src="item.icon" :alt="item.label" />
+            <span>{{ item.label }}</span>
           </li>
         </ul>
       </aside>
-      
-      <!-- 右侧内容区域 -->
-      <main class="content">
-        <!-- 内容头部 -->
+
+      <!-- 右侧主内容区 -->
+      <main class="main-content">
         <div class="content-header">
-          <span class="location">您现在的位置是：{{ currentLocation }}</span>
-          <span class="warning">温馨提示：为了正常显示内容，请使用IE10及以上版本</span>
-        </div>
-        
-        <!-- 内容主体 -->
-        <div class="content-body">
-          <router-view v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
-              <component :is="Component" />
-            </transition>
-          </router-view>
-          <!-- 系统管理员默认页面 -->
-          <div v-if="currentLocation === '系统管理员'" class="admin-page">
-            <img class="lock-icon" :src="lockIcon" alt="系统管理员">
-            <h2>系统管理员</h2>
-            <p>欢迎来到超市后台管理系统</p>
+          <div class="location-info">
+            <span>你现在的位置是: {{ currentLocation }}</span>
+          </div>
+          <div class="system-tip">
+            <span>温馨提示: 为了正常显示内容，请使用IE10及以上版本</span>
           </div>
         </div>
-        
-        <!-- 底部版权信息 -->
-        <div class="content-footer">
-          <span>超市集团©版权所有 2025-02-04</span>
+
+        <div v-if="route.path === '/home'" class="welcome-section">
+          <div class="welcome-card">
+            <img class="welcome-icon" :src="lockIcon" alt="系统管理员" />
+            <h2 class="welcome-title">系统管理员</h2>
+            <p class="welcome-message">欢迎来到超市后台管理系统</p>
+          </div>
         </div>
+
+        <router-view v-else v-slot="{ Component }">
+          <component :is="Component" />
+        </router-view>
+
+        <!-- 底部版权信息 -->
+        <footer class="system-footer">
+          <span>超市集团版权所有 © 2026-02-04</span>
+        </footer>
       </main>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-// 导入图标
-import goodsIcon from '../assets/icon/goods.png'
 import buyIcon from '../assets/icon/buy.png'
+import goodsIcon from '../assets/icon/goods.png'
 import gysIcon from '../assets/icon/gys.png'
-import yhIcon from '../assets/icon/yh.png'
+import lockIcon from '../assets/icon/zd.png'
 import mmIcon from '../assets/icon/mm.png'
 import tcIcon from '../assets/icon/tc.png'
-import lockIcon from '../assets/icon/zd.png'
+import yhIcon from '../assets/icon/yh.png'
 
 const router = useRouter()
 const route = useRoute()
 
 const username = ref('tom')
 const currentDate = ref('')
+let timer: number | undefined
 
-// 计算当前位置
-const currentLocation = computed(() => {
-  const path = route.path
-  if (path === '/home') return '系统管理员'
-  if (path === '/home/product') return '商品管理'
-  if (path === '/home/user') return '用户管理'
-  if (path === '/home/user/add') return '用户管理页面→用户添加页面'
-  return '系统管理员'
-})
+const menuItems = [
+  { label: '商品管理', path: '/home/product', icon: goodsIcon },
+  { label: '订单管理', path: '/home/bill', icon: buyIcon },
+  { label: '供应商管理', path: '/home/supplier', icon: gysIcon },
+  { label: '用户管理', path: '/home/user', icon: yhIcon },
+  { label: '密码修改', path: '/home/password', icon: mmIcon },
+  { label: '退出系统', path: '/login', icon: tcIcon }
+]
 
-// 导航到指定路由
-const navigate = (path: string) => {
-  router.push(path)
+const locationMap: Record<string, string> = {
+  '/home': '系统首页',
+  '/home/product': '商品管理',
+  '/home/bill': '订单管理',
+  '/home/supplier': '供应商管理',
+  '/home/user': '用户管理',
+  '/home/user/add': '用户管理页面>>用户添加页面',
+  '/home/user/detail': '用户管理页面>>用户详情页面',
+  '/home/user/edit': '用户管理页面>>用户修改页面',
+  '/home/password': '用户密码管理页面'
 }
 
-// 退出登录
+const currentLocation = computed(() => locationMap[route.path] ?? '系统首页')
+
+const isActive = (path: string) => {
+  if (path === '/login') {
+    return false
+  }
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
+
+const handleMenuClick = (item: { path: string }) => {
+  if (item.path === '/login') {
+    logout()
+    return
+  }
+  router.push(item.path)
+}
+
 const logout = () => {
   router.push('/login')
 }
 
-// 更新当前日期
 const updateCurrentDate = () => {
   const now = new Date()
   const year = now.getFullYear()
@@ -126,30 +132,34 @@ const updateCurrentDate = () => {
   const minutes = String(now.getMinutes()).padStart(2, '0')
   const seconds = String(now.getSeconds()).padStart(2, '0')
   const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-  const weekday = weekdays[now.getDay()]
-  currentDate.value = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${weekday}`
+  currentDate.value = `${year}年${month}月${day}日 ${hours}:${minutes}:${seconds} ${weekdays[now.getDay()]}`
 }
 
 onMounted(() => {
   updateCurrentDate()
-  setInterval(updateCurrentDate, 1000)
+  timer = window.setInterval(updateCurrentDate, 1000)
+})
+
+onUnmounted(() => {
+  if (timer) {
+    window.clearInterval(timer)
+  }
 })
 </script>
 
 <style scoped>
-.home-container {
+.system-container {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  font-family: Arial, sans-serif;
+  overflow: hidden;
 }
 
-/* 顶部导航栏 */
-.header {
-  height: 60px;
-  background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-  color: #333;
+.system-header {
+  height: 50px;
+  background: linear-gradient(90deg, #4A90E2 0%, #5FB8FF 100%);
+  color: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -158,7 +168,8 @@ onMounted(() => {
 }
 
 .header-left h1 {
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: bold;
   margin: 0;
 }
 
@@ -166,144 +177,144 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 20px;
-  font-size: 14px;
+  font-size: 12px;
 }
 
-.user-info {
+.header-time {
+  color: #fff;
+}
+
+.header-user {
+  color: #fff;
+}
+
+.header-welcome {
+  color: #fff;
   font-weight: bold;
 }
 
-.theme-btn {
-  padding: 4px 12px;
-  border: none;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #333;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.theme-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* 主要内容区域 */
-.main-content {
+.system-body {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* 左侧侧边栏 */
-.sidebar {
-  width: 200px;
-  background: #f5f5f5;
-  border-right: 1px solid #ddd;
+.function-sidebar {
+  width: 180px;
+  background: #F5F5F5;
+  border-right: 1px solid #E0E0E0;
   padding: 20px 0;
+  overflow-y: auto;
 }
 
-.sidebar h3 {
+.sidebar-title {
   font-size: 16px;
+  font-weight: bold;
   color: #333;
   margin: 0 0 20px 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #E0E0E0;
 }
 
-.menu {
+.function-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.menu li {
-  padding: 12px 20px;
-  cursor: pointer;
-  transition: background 0.3s;
+.function-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #333;
+  font-size: 14px;
 }
 
-.menu li:hover {
-  background: #e0e0e0;
+.function-item:hover {
+  background: #E3F2FD;
 }
 
-.menu-icon {
+.function-item.active {
+  background: #2196F3;
+  color: #fff;
+}
+
+.function-icon {
   width: 16px;
   height: 16px;
   object-fit: contain;
 }
 
-/* 右侧内容区域 */
-.content {
+.main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #fff;
 }
 
-/* 内容头部 */
 .content-header {
   height: 40px;
-  background: #f9f9f9;
-  border-bottom: 1px solid #ddd;
+  background: #F8F9FA;
+  border-bottom: 1px solid #E0E0E0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 20px;
-  font-size: 14px;
+  font-size: 12px;
   color: #666;
 }
 
-.location {
+.location-info {
   font-weight: bold;
 }
 
-.warning {
-  color: #ff6b6b;
+.system-tip {
+  color: #999;
 }
 
-/* 内容主体 */
-.content-body {
+.welcome-section {
   flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  background: white;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  background: #fff;
 }
 
-/* 系统管理员默认页面 */
-.admin-page {
+.welcome-card {
   text-align: center;
   padding: 40px;
+  background: #F8F9FA;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.lock-icon {
-  width: 64px;
-  height: 64px;
+.welcome-icon {
+  width: 80px;
+  height: 80px;
   margin-bottom: 20px;
 }
 
-.admin-page h2 {
+.welcome-title {
   font-size: 24px;
+  font-weight: bold;
   color: #333;
-  margin-bottom: 10px;
+  margin: 0 0 10px;
 }
 
-.admin-page p {
-  font-size: 16px;
+.welcome-message {
+  font-size: 14px;
   color: #666;
   margin: 0;
 }
 
-/* 内容底部 */
-.content-footer {
-  height: 40px;
-  background: #f9f9f9;
-  border-top: 1px solid #ddd;
+.system-footer {
+  height: 30px;
+  background: #F8F9FA;
+  border-top: 1px solid #E0E0E0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -311,14 +322,19 @@ onMounted(() => {
   color: #999;
 }
 
-/* 过渡动画 */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+@media (max-width: 768px) {
+  .function-sidebar {
+    width: 140px;
+  }
+  
+  .header-right {
+    gap: 10px;
+    font-size: 10px;
+  }
+  
+  .content-header {
+    font-size: 10px;
+    padding: 0 10px;
+  }
 }
 </style>

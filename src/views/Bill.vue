@@ -1,79 +1,75 @@
 <template>
-  <div class="product-container">
+  <div class="bill-container">
     <!-- 搜索区域 -->
     <div class="search-section">
       <div class="search-fields">
         <div class="search-item">
-          <label>商品名称：</label>
-          <input v-model="searchForm.productName" type="text" placeholder="请输入商品名称" />
+          <label>订单号：</label>
+          <input v-model="searchForm.orderNo" type="text" placeholder="请输入订单号" />
         </div>
         <div class="search-item">
-          <label>供应商号：</label>
-          <select v-model="searchForm.supplier">
-            <option value="">请选择</option>
-            <option value="3003">3003</option>
-            <option value="3004">3004</option>
-            <option value="3005">3005</option>
-          </select>
+          <label>客户名称：</label>
+          <input v-model="searchForm.customerName" type="text" placeholder="请输入客户名称" />
         </div>
         <div class="search-item">
-          <label>状态：</label>
+          <label>订单状态：</label>
           <select v-model="searchForm.status">
             <option value="">请选择</option>
-            <option value="上架">上架</option>
-            <option value="下架">下架</option>
+            <option value="待处理">待处理</option>
+            <option value="已完成">已完成</option>
+            <option value="已取消">已取消</option>
           </select>
         </div>
         <div class="search-actions">
           <button class="btn-search" @click="search">搜索</button>
           <button class="btn-reset" @click="resetSearch">重置</button>
-          <button class="btn-add" @click="openAddDialog">+ 添加商品</button>
+          <button class="btn-add" @click="openAddDialog">+ 添加订单</button>
         </div>
       </div>
     </div>
 
     <!-- 表格区域 -->
     <div class="table-section">
-      <table class="product-table">
+      <table class="bill-table">
         <thead>
           <tr>
-            <th>商品编码</th>
+            <th>订单号</th>
+            <th>客户名称</th>
             <th>商品名称</th>
-            <th>供应商号</th>
-            <th>价格</th>
-            <th>库存</th>
-            <th>状态</th>
+            <th>数量</th>
+            <th>总金额</th>
+            <th>订单状态</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="product in paginatedProducts" :key="product.id">
-            <td>{{ product.code }}</td>
-            <td>{{ product.name }}</td>
-            <td>{{ product.supplierId }}</td>
-            <td>{{ product.price.toFixed(2) }}</td>
-            <td>{{ product.stock }}</td>
+          <tr v-for="bill in paginatedBills" :key="bill.id">
+            <td>{{ bill.orderNo }}</td>
+            <td>{{ bill.customerName }}</td>
+            <td>{{ bill.productName }}</td>
+            <td>{{ bill.quantity }}</td>
+            <td>{{ bill.totalAmount.toFixed(2) }}</td>
             <td>
-              <span class="status-badge" :class="product.status === '上架' ? 'status-active' : 'status-inactive'">
-                {{ product.status }}
+              <span class="status-badge" :class="getStatusClass(bill.status)">
+                {{ bill.status }}
               </span>
             </td>
             <td>
               <div class="action-buttons">
-                <button class="action-btn view" title="查看" @click="viewProduct(product)">
+                <button class="action-btn view" title="查看" @click="viewBill(bill)">
                   <img :src="readIcon" alt="查看" />
                 </button>
-                <button class="action-btn edit" title="编辑" @click="openEditDialog(product)">
+                <button class="action-btn edit" title="编辑" @click="openEditDialog(bill)">
                   <img :src="xiugaiIcon" alt="编辑" />
                 </button>
-                <button class="action-btn delete" title="删除" @click="showDeleteDialog(product.id)">
+                <button class="action-btn delete" title="删除" @click="showDeleteDialog(bill.id)">
                   <img :src="schuIcon" alt="删除" />
                 </button>
               </div>
             </td>
           </tr>
-          <tr v-if="paginatedProducts.length === 0">
-            <td colspan="7" class="empty-cell">没有匹配到商品数据</td>
+          <tr v-if="paginatedBills.length === 0">
+            <td colspan="7" class="empty-cell">没有匹配到订单数据</td>
           </tr>
         </tbody>
       </table>
@@ -82,7 +78,7 @@
     <!-- 分页区域 -->
     <div class="pagination-section">
       <div class="pagination-info">
-        <span>共 {{ filteredProducts.length }} 条记录 / {{ totalPages }} 页</span>
+        <span>共 {{ filteredBills.length }} 条记录 / {{ totalPages }} 页</span>
       </div>
       <div class="pagination-controls">
         <select v-model="pageSize" @change="currentPage = 1">
@@ -125,51 +121,52 @@
       </div>
     </div>
 
-    <!-- 添加/编辑商品对话框 -->
+    <!-- 添加/编辑订单对话框 -->
     <div v-if="showFormDialog" class="modal-overlay" @click.self="showFormDialog = false">
       <div class="form-dialog">
         <div class="dialog-header">
-          <h3>{{ isEditing ? '编辑商品' : '添加商品' }}</h3>
+          <h3>{{ isEditing ? '编辑订单' : '添加订单' }}</h3>
         </div>
         <div class="dialog-body">
-          <form @submit.prevent="saveProduct">
+          <form @submit.prevent="saveBill">
             <div class="form-item">
-              <label>商品编码：</label>
-              <input v-model="formData.code" type="text" placeholder="请输入商品编码" :disabled="isEditing" />
+              <label>订单号：</label>
+              <input v-model="formData.orderNo" type="text" placeholder="请输入订单号" :disabled="isEditing" />
+            </div>
+            <div class="form-item">
+              <label>客户名称：</label>
+              <input v-model="formData.customerName" type="text" placeholder="请输入客户名称" required />
             </div>
             <div class="form-item">
               <label>商品名称：</label>
-              <input v-model="formData.name" type="text" placeholder="请输入商品名称" required />
-            </div>
-            <div class="form-item">
-              <label>供应商号：</label>
-              <select v-model="formData.supplierId" required>
+              <select v-model="formData.productName" required>
                 <option value="">请选择</option>
-                <option value="3003">3003</option>
-                <option value="3004">3004</option>
-                <option value="3005">3005</option>
+                <option value="苹果电脑">苹果电脑</option>
+                <option value="vivo手机">vivo手机</option>
+                <option value="oppo平板">oppo平板</option>
               </select>
             </div>
             <div class="form-item">
-              <label>价格：</label>
-              <input v-model.number="formData.price" type="number" placeholder="请输入价格" step="0.01" min="0" required />
+              <label>数量：</label>
+              <input v-model.number="formData.quantity" type="number" placeholder="请输入数量" min="1" required />
             </div>
             <div class="form-item">
-              <label>库存：</label>
-              <input v-model.number="formData.stock" type="number" placeholder="请输入库存" min="0" required />
+              <label>总金额：</label>
+              <input v-model.number="formData.totalAmount" type="number" placeholder="请输入总金额" step="0.01" min="0" required />
             </div>
             <div class="form-item">
-              <label>状态：</label>
+              <label>订单状态：</label>
               <select v-model="formData.status" required>
-                <option value="上架">上架</option>
-                <option value="下架">下架</option>
+                <option value="待处理">待处理</option>
+                <option value="已完成">已完成</option>
+                <option value="已取消">已取消</option>
               </select>
             </div>
           </form>
         </div>
         <div class="dialog-footer">
           <button class="btn-cancel" @click="showFormDialog = false">取消</button>
-          <button class="btn-confirm" @click="saveProduct">确定</button>
+          <button class="btn-confirm" @click="saveBill">确定</button>
         </div>
       </div>
     </div>
@@ -183,26 +180,26 @@ import readIcon from '../assets/icon/read.png'
 import schuIcon from '../assets/icon/schu.png'
 import xiugaiIcon from '../assets/icon/xiugai.png'
 
-interface Product {
+interface Bill {
   id: number
-  code: string
-  name: string
-  supplierId: string
-  price: number
-  stock: number
+  orderNo: string
+  customerName: string
+  productName: string
+  quantity: number
+  totalAmount: number
   status: string
 }
 
 const searchForm = ref({
-  productName: '',
-  supplier: '',
+  orderNo: '',
+  customerName: '',
   status: ''
 })
 
-const products = ref<Product[]>([
-  { id: 1, code: 'product1004', name: '苹果电脑', supplierId: '3004', price: 8500, stock: 10, status: '下架' },
-  { id: 2, code: 'product1005', name: 'vivo手机', supplierId: '3003', price: 2980, stock: 218, status: '上架' },
-  { id: 3, code: 'product1006', name: 'oppo平板', supplierId: '3005', price: 1980, stock: 182, status: '上架' }
+const bills = ref<Bill[]>([
+  { id: 1, orderNo: 'order1001', customerName: '张三', productName: '苹果电脑', quantity: 2, totalAmount: 17000, status: '待处理' },
+  { id: 2, orderNo: 'order1002', customerName: '李四', productName: 'vivo手机', quantity: 1, totalAmount: 2980, status: '已完成' },
+  { id: 3, orderNo: 'order1003', customerName: '王五', productName: 'oppo平板', quantity: 3, totalAmount: 5940, status: '已取消' }
 ])
 
 let nextId = 4
@@ -211,23 +208,23 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const goToPage = ref(1)
 
-const filteredProducts = computed(() =>
-  products.value.filter((product) => {
-    const matchName = !searchForm.value.productName || product.name.includes(searchForm.value.productName)
-    const matchSupplier = !searchForm.value.supplier || product.supplierId === searchForm.value.supplier
-    const matchStatus = !searchForm.value.status || product.status === searchForm.value.status
+const filteredBills = computed(() =>
+  bills.value.filter((bill) => {
+    const matchOrderNo = !searchForm.value.orderNo || bill.orderNo.includes(searchForm.value.orderNo)
+    const matchCustomerName = !searchForm.value.customerName || bill.customerName.includes(searchForm.value.customerName)
+    const matchStatus = !searchForm.value.status || bill.status === searchForm.value.status
 
-    return matchName && matchSupplier && matchStatus
+    return matchOrderNo && matchCustomerName && matchStatus
   })
 )
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredProducts.value.length / pageSize.value)))
-const paginatedProducts = computed(() => {
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredBills.value.length / pageSize.value)))
+const paginatedBills = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
-  return filteredProducts.value.slice(start, start + pageSize.value)
+  return filteredBills.value.slice(start, start + pageSize.value)
 })
 
-watch(filteredProducts, () => {
+watch(filteredBills, () => {
   if (currentPage.value > totalPages.value) {
     currentPage.value = totalPages.value
     goToPage.value = totalPages.value
@@ -241,8 +238,8 @@ const search = () => {
 
 const resetSearch = () => {
   searchForm.value = {
-    productName: '',
-    supplier: '',
+    orderNo: '',
+    customerName: '',
     status: ''
   }
   search()
@@ -277,61 +274,74 @@ const navigateToPage = () => {
   goToPage.value = page
 }
 
-const viewProduct = (product: Product) => {
-  alert(`查看商品：${product.name}\n编码：${product.code}\n价格：${product.price.toFixed(2)}\n库存：${product.stock}\n状态：${product.status}`)
+const getStatusClass = (status: string) => {
+  switch (status) {
+    case '待处理':
+      return 'status-pending'
+    case '已完成':
+      return 'status-active'
+    case '已取消':
+      return 'status-inactive'
+    default:
+      return ''
+  }
+}
+
+const viewBill = (bill: Bill) => {
+  alert(`查看订单：${bill.orderNo}\n客户：${bill.customerName}\n商品：${bill.productName}\n数量：${bill.quantity}\n总金额：${bill.totalAmount.toFixed(2)}\n状态：${bill.status}`)
 }
 
 const showFormDialog = ref(false)
 const isEditing = ref(false)
-const formData = ref<Product>({
+const formData = ref<Bill>({
   id: 0,
-  code: '',
-  name: '',
-  supplierId: '',
-  price: 0,
-  stock: 0,
-  status: '上架'
+  orderNo: '',
+  customerName: '',
+  productName: '',
+  quantity: 1,
+  totalAmount: 0,
+  status: '待处理'
 })
 
 const openAddDialog = () => {
   isEditing.value = false
   formData.value = {
     id: 0,
-    code: '',
-    name: '',
-    supplierId: '',
-    price: 0,
-    stock: 0,
-    status: '上架'
+    orderNo: '',
+    customerName: '',
+    productName: '',
+    quantity: 1,
+    totalAmount: 0,
+    status: '待处理'
   }
   showFormDialog.value = true
 }
 
-const openEditDialog = (product: Product) => {
+const openEditDialog = (bill: Bill) => {
   isEditing.value = true
-  formData.value = { ...product }
+  formData.value = { ...bill }
   showFormDialog.value = true
 }
 
-const saveProduct = () => {
-  if (!formData.value.code || !formData.value.name || !formData.value.supplierId) {
-    alert('请填写完整的商品信息')
+const saveBill = () => {
+  if (!formData.value.orderNo || !formData.value.customerName || !formData.value.productName) {
+    alert('请填写完整的订单信息')
     return
   }
 
   if (isEditing.value) {
-    // 编辑现有商品
-    const index = products.value.findIndex(p => p.id === formData.value.id)
+    // 编辑现有订单
+    const index = bills.value.findIndex(b => b.id === formData.value.id)
     if (index !== -1) {
-      products.value[index] = { ...formData.value }
+      bills.value[index] = { ...formData.value }
     }
   } else {
-    // 添加新商品
-    const newProduct: Product = {
+    // 添加新订单
+    const newBill: Bill = {
       ...formData.value,
       id: nextId++
     }
-    products.value.push(newProduct)
+    bills.value.push(newBill)
   }
 
   showFormDialog.value = false
@@ -347,14 +357,14 @@ const showDeleteDialog = (id: number) => {
 }
 
 const confirmDelete = () => {
-  products.value = products.value.filter((product) => product.id !== deleteId.value)
+  bills.value = bills.value.filter((bill) => bill.id !== deleteId.value)
   showDelDialog.value = false
   search()
 }
 </script>
 
 <style scoped>
-.product-container {
+.bill-container {
   padding: 20px;
   height: calc(100vh - 120px);
   display: flex;
@@ -459,20 +469,20 @@ const confirmDelete = () => {
   border-radius: 4px;
 }
 
-.product-table {
+.bill-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.product-table th,
-.product-table td {
+.bill-table th,
+.bill-table td {
   padding: 12px;
   text-align: center;
   border-bottom: 1px solid #E0E0E0;
 }
 
-.product-table th {
+.bill-table th {
   background: #F8F9FA;
   font-weight: bold;
   color: #333;
@@ -481,7 +491,7 @@ const confirmDelete = () => {
   z-index: 10;
 }
 
-.product-table tr:hover {
+.bill-table tr:hover {
   background: #F5F5F5;
 }
 
@@ -500,6 +510,11 @@ const confirmDelete = () => {
 .status-inactive {
   background: #F8D7DA;
   color: #721C24;
+}
+
+.status-pending {
+  background: #FFF3CD;
+  color: #856404;
 }
 
 .action-buttons {

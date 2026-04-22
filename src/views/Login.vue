@@ -1,20 +1,20 @@
 <template>
-  <div class="login-container">
-    <h1>超市后台管理系统</h1>
-    <div class="login-form">
-      <div class="form-header"></div>
-      <div class="form-body">
+  <div class="login-page">
+    <h1 class="login-title">超市后台管理系统</h1>
+    <div class="login-card">
+      <div class="login-card-header"></div>
+      <div class="login-form">
         <div class="form-item">
-          <label for="username">用户名:</label>
-          <input type="text" id="username" v-model="form.username" placeholder="请输入用户帐号">
+          <label>用户名:</label>
+          <input v-model="form.username" type="text" placeholder="请输入用户帐号" />
         </div>
         <div class="form-item">
-          <label for="password">密 码:</label>
-          <input type="password" id="password" v-model="form.password" placeholder="请输入密码">
+          <label>密 码:</label>
+          <input v-model="form.password" type="password" placeholder="请输入密码" />
         </div>
         <div class="form-actions">
-          <button @click="login">登录</button>
-          <button @click="reset">重置</button>
+          <button class="btn-login" @click="login">登录</button>
+          <button class="btn-reset" @click="reset">重置</button>
         </div>
       </div>
     </div>
@@ -33,9 +33,7 @@ const form = ref({
 })
 
 const login = () => {
-  // 简单的登录验证
   if (form.value.username && form.value.password) {
-    // 登录成功，跳转到主页
     router.push('/home')
   } else {
     alert('请输入用户名和密码')
@@ -49,38 +47,55 @@ const reset = () => {
 </script>
 
 <style scoped>
-.login-container {
+.login-page {
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  font-family: Arial, sans-serif;
-}
-
-.login-container h1 {
-  color: white;
-  margin-bottom: 40px;
-  font-size: 28px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.login-form {
-  width: 400px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  justify-content: center;
+  background: linear-gradient(135deg, #4A90E2 0%, #5FB8FF 100%);
+  position: relative;
   overflow: hidden;
 }
 
-.form-header {
-  height: 10px;
-  background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+.login-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
 }
 
-.form-body {
+.login-title {
+  color: #fff;
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 40px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+.login-card {
+  width: 400px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.login-card-header {
+  height: 10px;
+  background: #4A90E2;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.login-form {
   padding: 30px;
 }
 
@@ -98,7 +113,8 @@ const reset = () => {
 
 .form-item input {
   flex: 1;
-  padding: 8px 12px;
+  height: 32px;
+  padding: 0 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
@@ -111,18 +127,53 @@ const reset = () => {
   margin-top: 30px;
 }
 
-.form-actions button {
-  padding: 8px 24px;
+.btn-login,
+.btn-reset {
+  width: 80px;
+  height: 36px;
   border: none;
   border-radius: 4px;
-  background: #4facfe;
-  color: white;
   font-size: 14px;
+  font-weight: bold;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s ease;
 }
 
-.form-actions button:hover {
-  background: #3a8ffd;
+.btn-login {
+  background: #4A90E2;
+  color: #fff;
+}
+
+.btn-login:hover {
+  background: #357ABD;
+}
+
+.btn-reset {
+  background: #E0E0E0;
+  color: #333;
+}
+
+.btn-reset:hover {
+  background: #D0D0D0;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    width: 90%;
+    max-width: 400px;
+  }
+  
+  .form-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .form-item label {
+    margin-bottom: 5px;
+  }
+  
+  .form-item input {
+    width: 100%;
+  }
 }
 </style>
