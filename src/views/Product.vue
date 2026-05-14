@@ -349,7 +349,7 @@ const saveProduct = async () => {
     }
 
     showFormDialog.value = false
-    await loadProducts()
+    await loadData()
     search()
   } catch (error) {
     alert('保存失败，请确认 json-server 已启动')
@@ -374,7 +374,7 @@ const confirmDelete = async () => {
     await deleteProduct(deleteId.value)
     showDelDialog.value = false
     deleteId.value = null
-    await loadProducts()
+    await loadData()
     search()
   } catch (error) {
     alert('删除失败，请确认 json-server 已启动')

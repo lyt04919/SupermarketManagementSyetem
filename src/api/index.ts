@@ -30,12 +30,19 @@ export interface Supplier {
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://127.0.0.1:3001'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const url = `${API_BASE_URL}${path}`
+  const method = init?.method ?? 'GET'
+
+  console.log('[api request]', method, url)
+
+  const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json'
     },
     ...init
   })
+
+  console.log('[api response]', method, url, response.status)
 
   if (!response.ok) {
     throw new Error(`请求失败：${response.status}`)

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "json-server --watch mock/db.json --host 127.0.0.1 --port 3001",
+    "server": "node scripts/mock-server.mjs",
+    "reset:db": "cp db.seed.json db.json",
     "build": "vite build",
     "preview": "vite preview"
   },
