@@ -1,18 +1,39 @@
-# Vue 3 + TypeScript + Vite
+# 超市后台管理系统
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+基于 `Vue 3 + TypeScript + Vite + json-server` 的课程作业项目，当前包含商品管理、订单管理、供应商管理，以及登录、用户、密码修改等页面。
 
-## Recommended IDE Setup
+## 运行方式
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+```bash
+npm install
+npm run server
+npm run dev
+```
 
-## Type Support For `.vue` Imports in TS
+默认地址：
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+- 前端：`http://127.0.0.1:5173`
+- 模拟接口：`http://127.0.0.1:3001`
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+## 目录结构
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+```text
+mydemo/
+├── mock/                 # json-server 模拟数据
+├── src/
+│   ├── api/              # 接口请求封装
+│   ├── assets/
+│   │   └── icons/        # 页面图标资源
+│   ├── router/           # 路由配置
+│   ├── views/            # 页面组件
+│   ├── App.vue
+│   └── main.ts
+├── package.json
+└── vite.config.ts
+```
+
+## 说明
+
+- 模拟数据库文件位于 `mock/db.json`
+- 商品、订单、供应商模块已接入 `json-server`
+- 若需要切换接口地址，可通过 `VITE_API_BASE_URL` 配置

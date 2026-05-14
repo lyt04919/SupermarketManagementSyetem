@@ -23,6 +23,8 @@
       </div>
     </div>
 
+    <p v-if="errorMessage" class="empty-cell">{{ errorMessage }}</p>
+
     <!-- 表格区域 -->
     <div class="table-section">
       <table class="supplier-table">
@@ -150,20 +152,18 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
-import readIcon from '../assets/icon/read.png'
-import schuIcon from '../assets/icon/schu.png'
-import xiugaiIcon from '../assets/icon/xiugai.png'
-
-interface Supplier {
-  id: number
-  supplierId: string
-  supplierName: string
-  contact: string
-  phone: string
-  address: string
-}
+import readIcon from '../assets/icons/read.png'
+import schuIcon from '../assets/icons/schu.png'
+import xiugaiIcon from '../assets/icons/xiugai.png'
+import {
+  createSupplier,
+  deleteSupplier,
+  listSuppliers,
+  type Supplier,
+  updateSupplier
+} from '../api'
 
 const searchForm = ref({
   supplierId: '',
@@ -171,14 +171,8 @@ const searchForm = ref({
   contact: ''
 })
 
-const suppliers = ref<Supplier[]>([
-  { id: 1, supplierId: '3003', supplierName: 'vivo供应商', contact: '张经理', phone: '13800138000', address: '广东省深圳市' },
-  { id: 2, supplierId: '3004', supplierName: '苹果供应商', contact: '李经理', phone: '13900139000', address: '上海市浦东新区' },
-  { id: 3, supplierId: '3005', supplierName: 'oppo供应商', contact: '王经理', phone: '13700137000', address: '广东省东莞市' }
-])
-
-let nextId = 4
-
+const suppliers = ref<Supplier[]>([])
+const errorMessage = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const goToPage = ref(1)
@@ -205,6 +199,21 @@ watch(filteredSuppliers, () => {
     goToPage.value = totalPages.value
   }
 })
+
+const loadSuppliersData = async () => {
+  suppliers.value = await listSuppliers()
+}
+
+const loadData = async () => {
+  errorMessage.value = ''
+
+  try {
+    await loadSuppliersData()
+  } catch (error) {
+    errorMessage.value = '数据加载失败，请先启动 json-server：npm run server'
+    console.error(error)
+  }
+}
 
 const search = () => {
   currentPage.value = 1
@@ -256,7 +265,7 @@ const viewSupplier = (supplier: Supplier) => {
 const showFormDialog = ref(false)
 const isEditing = ref(false)
 const formData = ref<Supplier>({
-  id: 0,
+  id: undefined,
   supplierId: '',
   supplierName: '',
   contact: '',
@@ -267,7 +276,7 @@ const formData = ref<Supplier>({
 const openAddDialog = () => {
   isEditing.value = false
   formData.value = {
-    id: 0,
+    id: undefined,
     supplierId: '',
     supplierName: '',
     contact: '',
@@ -283,29 +292,32 @@ const openEditDialog = (supplier: Supplier) => {
   showFormDialog.value = true
 }
 
-const saveSupplier = () => {
+const saveSupplier = async () => {
   if (!formData.value.supplierId || !formData.value.supplierName || !formData.value.contact || !formData.value.phone || !formData.value.address) {
     alert('请填写完整的供应商信息')
     return
   }
 
-  if (isEditing.value) {
-    // 编辑现有供应商
-    const index = suppliers.value.findIndex(s => s.id === formData.value.id)
-    if (index !== -1) {
-      suppliers.value[index] = { ...formData.value }
+  try {
+    if (isEditing.value && formData.value.id) {
+      await updateSupplier(formData.value.id, formData.value)
+    } else {
+      await createSupplier({
+        supplierId: formData.value.supplierId,
+        supplierName: formData.value.supplierName,
+        contact: formData.value.contact,
+        phone: formData.value.phone,
+        address: formData.value.address
+      })
     }
-  } else {
-    // 添加新供应商
-    const newSupplier: Supplier = {
-      ...formData.value,
-      id: nextId++
-    }
-    suppliers.value.push(newSupplier)
-  }
 
-  showFormDialog.value = false
-  search()
+    showFormDialog.value = false
+    await loadSuppliersData()
+    search()
+  } catch (error) {
+    alert('保存失败，请确认 json-server 已启动')
+    console.error(error)
+  }
 }
 
 const showDelDialog = ref(false)
@@ -316,11 +328,24 @@ const showDeleteDialog = (id: number) => {
   showDelDialog.value = true
 }
 
-const confirmDelete = () => {
-  suppliers.value = suppliers.value.filter((supplier) => supplier.id !== deleteId.value)
-  showDelDialog.value = false
-  search()
+const confirmDelete = async () => {
+  if (!deleteId.value) {
+    return
+  }
+
+  try {
+    await deleteSupplier(deleteId.value)
+    showDelDialog.value = false
+    deleteId.value = null
+    await loadSuppliersData()
+    search()
+  } catch (error) {
+    alert('删除失败，请确认 json-server 已启动')
+    console.error(error)
+  }
 }
+
+onMounted(loadData)
 </script>
 
 <style scoped>

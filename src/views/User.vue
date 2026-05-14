@@ -119,9 +119,9 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import readIcon from '../assets/icon/read.png'
-import schuIcon from '../assets/icon/schu.png'
-import xiugaiIcon from '../assets/icon/xiugai.png'
+import readIcon from '../assets/icons/read.png'
+import schuIcon from '../assets/icons/schu.png'
+import xiugaiIcon from '../assets/icons/xiugai.png'
 
 interface UserRecord {
   id: number

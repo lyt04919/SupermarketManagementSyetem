@@ -11,9 +11,9 @@
           <label>供应商号：</label>
           <select v-model="searchForm.supplier">
             <option value="">请选择</option>
-            <option value="3003">3003</option>
-            <option value="3004">3004</option>
-            <option value="3005">3005</option>
+            <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.supplierId">
+              {{ supplier.supplierId }}
+            </option>
           </select>
         </div>
         <div class="search-item">
@@ -31,6 +31,8 @@
         </div>
       </div>
     </div>
+
+    <p v-if="errorMessage" class="empty-cell">{{ errorMessage }}</p>
 
     <!-- 表格区域 -->
     <div class="table-section">
@@ -145,9 +147,9 @@
               <label>供应商号：</label>
               <select v-model="formData.supplierId" required>
                 <option value="">请选择</option>
-                <option value="3003">3003</option>
-                <option value="3004">3004</option>
-                <option value="3005">3005</option>
+                <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.supplierId">
+                  {{ supplier.supplierId }} - {{ supplier.supplierName }}
+                </option>
               </select>
             </div>
             <div class="form-item">
@@ -177,21 +179,20 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
-import readIcon from '../assets/icon/read.png'
-import schuIcon from '../assets/icon/schu.png'
-import xiugaiIcon from '../assets/icon/xiugai.png'
-
-interface Product {
-  id: number
-  code: string
-  name: string
-  supplierId: string
-  price: number
-  stock: number
-  status: string
-}
+import readIcon from '../assets/icons/read.png'
+import schuIcon from '../assets/icons/schu.png'
+import xiugaiIcon from '../assets/icons/xiugai.png'
+import {
+  createProduct,
+  deleteProduct,
+  listProducts,
+  listSuppliers,
+  type Product,
+  type Supplier,
+  updateProduct
+} from '../api'
 
 const searchForm = ref({
   productName: '',
@@ -199,14 +200,9 @@ const searchForm = ref({
   status: ''
 })
 
-const products = ref<Product[]>([
-  { id: 1, code: 'product1004', name: '苹果电脑', supplierId: '3004', price: 8500, stock: 10, status: '下架' },
-  { id: 2, code: 'product1005', name: 'vivo手机', supplierId: '3003', price: 2980, stock: 218, status: '上架' },
-  { id: 3, code: 'product1006', name: 'oppo平板', supplierId: '3005', price: 1980, stock: 182, status: '上架' }
-])
-
-let nextId = 4
-
+const products = ref<Product[]>([])
+const suppliers = ref<Supplier[]>([])
+const errorMessage = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const goToPage = ref(1)
@@ -233,6 +229,25 @@ watch(filteredProducts, () => {
     goToPage.value = totalPages.value
   }
 })
+
+const loadProducts = async () => {
+  products.value = await listProducts()
+}
+
+const loadSuppliersData = async () => {
+  suppliers.value = await listSuppliers()
+}
+
+const loadData = async () => {
+  errorMessage.value = ''
+
+  try {
+    await Promise.all([loadProducts(), loadSuppliersData()])
+  } catch (error) {
+    errorMessage.value = '数据加载失败，请先启动 json-server：npm run server'
+    console.error(error)
+  }
+}
 
 const search = () => {
   currentPage.value = 1
@@ -284,7 +299,7 @@ const viewProduct = (product: Product) => {
 const showFormDialog = ref(false)
 const isEditing = ref(false)
 const formData = ref<Product>({
-  id: 0,
+  id: undefined,
   code: '',
   name: '',
   supplierId: '',
@@ -296,7 +311,7 @@ const formData = ref<Product>({
 const openAddDialog = () => {
   isEditing.value = false
   formData.value = {
-    id: 0,
+    id: undefined,
     code: '',
     name: '',
     supplierId: '',
@@ -313,29 +328,33 @@ const openEditDialog = (product: Product) => {
   showFormDialog.value = true
 }
 
-const saveProduct = () => {
+const saveProduct = async () => {
   if (!formData.value.code || !formData.value.name || !formData.value.supplierId) {
     alert('请填写完整的商品信息')
     return
   }
 
-  if (isEditing.value) {
-    // 编辑现有商品
-    const index = products.value.findIndex(p => p.id === formData.value.id)
-    if (index !== -1) {
-      products.value[index] = { ...formData.value }
+  try {
+    if (isEditing.value && formData.value.id) {
+      await updateProduct(formData.value.id, formData.value)
+    } else {
+      await createProduct({
+        code: formData.value.code,
+        name: formData.value.name,
+        supplierId: formData.value.supplierId,
+        price: formData.value.price,
+        stock: formData.value.stock,
+        status: formData.value.status
+      })
     }
-  } else {
-    // 添加新商品
-    const newProduct: Product = {
-      ...formData.value,
-      id: nextId++
-    }
-    products.value.push(newProduct)
-  }
 
-  showFormDialog.value = false
-  search()
+    showFormDialog.value = false
+    await loadProducts()
+    search()
+  } catch (error) {
+    alert('保存失败，请确认 json-server 已启动')
+    console.error(error)
+  }
 }
 
 const showDelDialog = ref(false)
@@ -346,11 +365,24 @@ const showDeleteDialog = (id: number) => {
   showDelDialog.value = true
 }
 
-const confirmDelete = () => {
-  products.value = products.value.filter((product) => product.id !== deleteId.value)
-  showDelDialog.value = false
-  search()
+const confirmDelete = async () => {
+  if (!deleteId.value) {
+    return
+  }
+
+  try {
+    await deleteProduct(deleteId.value)
+    showDelDialog.value = false
+    deleteId.value = null
+    await loadProducts()
+    search()
+  } catch (error) {
+    alert('删除失败，请确认 json-server 已启动')
+    console.error(error)
+  }
 }
+
+onMounted(loadData)
 </script>
 
 <style scoped>

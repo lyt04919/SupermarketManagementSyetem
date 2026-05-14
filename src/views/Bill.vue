@@ -28,6 +28,8 @@
       </div>
     </div>
 
+    <p v-if="errorMessage" class="empty-cell">{{ errorMessage }}</p>
+
     <!-- 表格区域 -->
     <div class="table-section">
       <table class="bill-table">
@@ -141,9 +143,9 @@
               <label>商品名称：</label>
               <select v-model="formData.productName" required>
                 <option value="">请选择</option>
-                <option value="苹果电脑">苹果电脑</option>
-                <option value="vivo手机">vivo手机</option>
-                <option value="oppo平板">oppo平板</option>
+                <option v-for="product in products" :key="product.id" :value="product.name">
+                  {{ product.name }}
+                </option>
               </select>
             </div>
             <div class="form-item">
@@ -174,21 +176,20 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
-import readIcon from '../assets/icon/read.png'
-import schuIcon from '../assets/icon/schu.png'
-import xiugaiIcon from '../assets/icon/xiugai.png'
-
-interface Bill {
-  id: number
-  orderNo: string
-  customerName: string
-  productName: string
-  quantity: number
-  totalAmount: number
-  status: string
-}
+import readIcon from '../assets/icons/read.png'
+import schuIcon from '../assets/icons/schu.png'
+import xiugaiIcon from '../assets/icons/xiugai.png'
+import {
+  createBill,
+  deleteBill,
+  listBills,
+  listProducts,
+  type Bill,
+  type Product,
+  updateBill
+} from '../api'
 
 const searchForm = ref({
   orderNo: '',
@@ -196,14 +197,9 @@ const searchForm = ref({
   status: ''
 })
 
-const bills = ref<Bill[]>([
-  { id: 1, orderNo: 'order1001', customerName: '张三', productName: '苹果电脑', quantity: 2, totalAmount: 17000, status: '待处理' },
-  { id: 2, orderNo: 'order1002', customerName: '李四', productName: 'vivo手机', quantity: 1, totalAmount: 2980, status: '已完成' },
-  { id: 3, orderNo: 'order1003', customerName: '王五', productName: 'oppo平板', quantity: 3, totalAmount: 5940, status: '已取消' }
-])
-
-let nextId = 4
-
+const bills = ref<Bill[]>([])
+const products = ref<Product[]>([])
+const errorMessage = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const goToPage = ref(1)
@@ -230,6 +226,25 @@ watch(filteredBills, () => {
     goToPage.value = totalPages.value
   }
 })
+
+const loadBills = async () => {
+  bills.value = await listBills()
+}
+
+const loadProductsData = async () => {
+  products.value = await listProducts()
+}
+
+const loadData = async () => {
+  errorMessage.value = ''
+
+  try {
+    await Promise.all([loadBills(), loadProductsData()])
+  } catch (error) {
+    errorMessage.value = '数据加载失败，请先启动 json-server：npm run server'
+    console.error(error)
+  }
+}
 
 const search = () => {
   currentPage.value = 1
@@ -294,7 +309,7 @@ const viewBill = (bill: Bill) => {
 const showFormDialog = ref(false)
 const isEditing = ref(false)
 const formData = ref<Bill>({
-  id: 0,
+  id: undefined,
   orderNo: '',
   customerName: '',
   productName: '',
@@ -306,7 +321,7 @@ const formData = ref<Bill>({
 const openAddDialog = () => {
   isEditing.value = false
   formData.value = {
-    id: 0,
+    id: undefined,
     orderNo: '',
     customerName: '',
     productName: '',
@@ -323,29 +338,33 @@ const openEditDialog = (bill: Bill) => {
   showFormDialog.value = true
 }
 
-const saveBill = () => {
+const saveBill = async () => {
   if (!formData.value.orderNo || !formData.value.customerName || !formData.value.productName) {
     alert('请填写完整的订单信息')
     return
   }
 
-  if (isEditing.value) {
-    // 编辑现有订单
-    const index = bills.value.findIndex(b => b.id === formData.value.id)
-    if (index !== -1) {
-      bills.value[index] = { ...formData.value }
+  try {
+    if (isEditing.value && formData.value.id) {
+      await updateBill(formData.value.id, formData.value)
+    } else {
+      await createBill({
+        orderNo: formData.value.orderNo,
+        customerName: formData.value.customerName,
+        productName: formData.value.productName,
+        quantity: formData.value.quantity,
+        totalAmount: formData.value.totalAmount,
+        status: formData.value.status
+      })
     }
-  } else {
-    // 添加新订单
-    const newBill: Bill = {
-      ...formData.value,
-      id: nextId++
-    }
-    bills.value.push(newBill)
-  }
 
-  showFormDialog.value = false
-  search()
+    showFormDialog.value = false
+    await loadBills()
+    search()
+  } catch (error) {
+    alert('保存失败，请确认 json-server 已启动')
+    console.error(error)
+  }
 }
 
 const showDelDialog = ref(false)
@@ -356,11 +375,24 @@ const showDeleteDialog = (id: number) => {
   showDelDialog.value = true
 }
 
-const confirmDelete = () => {
-  bills.value = bills.value.filter((bill) => bill.id !== deleteId.value)
-  showDelDialog.value = false
-  search()
+const confirmDelete = async () => {
+  if (!deleteId.value) {
+    return
+  }
+
+  try {
+    await deleteBill(deleteId.value)
+    showDelDialog.value = false
+    deleteId.value = null
+    await loadBills()
+    search()
+  } catch (error) {
+    alert('删除失败，请确认 json-server 已启动')
+    console.error(error)
+  }
 }
+
+onMounted(loadData)
 </script>
 
 <style scoped>

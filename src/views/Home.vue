@@ -66,13 +66,13 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import buyIcon from '../assets/icon/buy.png'
-import goodsIcon from '../assets/icon/goods.png'
-import gysIcon from '../assets/icon/gys.png'
-import lockIcon from '../assets/icon/zd.png'
-import mmIcon from '../assets/icon/mm.png'
-import tcIcon from '../assets/icon/tc.png'
-import yhIcon from '../assets/icon/yh.png'
+import buyIcon from '../assets/icons/buy.png'
+import goodsIcon from '../assets/icons/goods.png'
+import gysIcon from '../assets/icons/gys.png'
+import lockIcon from '../assets/icons/zd.png'
+import mmIcon from '../assets/icons/mm.png'
+import tcIcon from '../assets/icons/tc.png'
+import yhIcon from '../assets/icons/yh.png'
 
 const router = useRouter()
 const route = useRoute()
